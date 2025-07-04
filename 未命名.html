@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>货运单录入与审核系统</title>
+  <style>
+    /* 基础重置 */
+    * {
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box; 
+      font-family: "Microsoft YaHei", sans-serif;
+    }
+    body {
+      background: #f5f7fa; 
+      padding: 20px; 
+      display: flex; 
+      flex-direction: column; 
+      gap: 20px;
+    }
+    .container {
+      width: 100%; 
+      max-width: 1200px; 
+      margin: 0 auto;
+    }
+    .card {
+      background: #fff; 
+      border-radius: 8px; 
+      padding: 20px; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .title {
+      font-size: 20px; 
+      font-weight: 600; 
+      margin-bottom: 16px; 
+      color: #333;
+    }
+    .form-row {
+      display: flex; 
+      flex-wrap: wrap; 
+      gap: 20px; 
+      margin-bottom: 12px;
+    }
+    .form-item {
+      display: flex; 
+      flex-direction: column; 
+      width: calc(50% - 10px); /* 双栏布局 */
+      min-width: 240px;
+    }
+    .form-item label {
+      font-size: 14px; 
+      color: #666; 
+      margin-bottom: 4px;
+    }
+    .form-item input, 
+    .form-item select,
+    .form-item textarea {
+      padding: 8px 12px; 
+      border: 1px solid #ddd; 
+      border-radius: 4px; 
+      font-size: 14px; 
+      resize: none;
+    }
+    .table-box {
+      width: 100%; 
+      overflow-x: auto;
+    }
+    table {
+      width: 100%; 
+      border-collapse: collapse; 
+      text-align: left;
+    }
+    th, td {
+      border: 1px solid #eee; 
+      padding: 10px; 
+      min-width: 120px;
+    }
+    th {
+      background: #fafafa; 
+      font-weight: 600;
+    }
+    .btn-group {
+      display: flex; 
+      gap: 10px; 
+      margin-top: 20px;
+    }
+    .btn {
+      padding: 8px 20px; 
+      border: none; 
+      border-radius: 4px; 
+      cursor: pointer; 
+      transition: all 0.3s;
+    }
+    .btn-primary {
+      background: #409eff; 
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: #66b1ff;
+    }
+    .btn-default {
+      background: #f0f0f0; 
+      color: #333;
+    }
+    .btn-default:hover {
+      background: #e6e6e6;
+    }
+    .audit-status {
+      color: #ff9900; 
+      font-weight: 600; 
+      margin-bottom: 10px; 
+      display: inline-block;
+    }
+    /* 响应式适配 */
+    @media (max-width: 768px) {
+      .form-item {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 录入页 -->
+    <div class="card" id="input-card">
+      <div class="title">运单录入（运单号：2025093012）</div>
+      <!-- 基础信息 -->
+      <div class="form-row">
+        <div class="form-item">
+          <label>始发站</label>
+          <input type="text" placeholder="如：沈阳XX仓库" id="start-station">
+        </div>
+        <div class="form-item">
+          <label>目的站</label>
+          <input type="text" placeholder="如：北京XX网点" id="end-station">
+        </div>
+      </div>
+
+      <!-- 收发人信息 -->
+      <div class="title" style="margin-top: 20px;">收发人信息</div>
+      <div class="form-row">
+        <!-- 发货人 -->
+        <div class="form-item">
+          <label>发货单位</label>
+          <input type="text" id="sender-company">
+        </div>
+        <div class="form-item">
+          <label>发货人</label>
+          <input type="text" id="sender-name">
+        </div>
+        <div class="form-item">
+          <label>发货地址</label>
+          <input type="text" id="sender-address">
+        </div>
+        <div class="form-item">
+          <label>联系电话</label>
+          <input type="text" id="sender-phone">
+        </div>
+        <!-- 收货人 -->
+        <div class="form-item">
+          <label>收货单位</label>
+          <input type="text" id="receiver-company">
+        </div>
+        <div class="form-item">
+          <label>收货人</label>
+          <input type="text" id="receiver-name">
+        </div>
+        <div class="form-item">
+          <label>收货地址</label>
+          <input type="text" id="receiver-address">
+        </div>
+        <div class="form-item">
+          <label>联系电话</label>
+          <input type="text" id="receiver-phone">
+        </div>
+      </div>
+
+      <!-- 货物信息表格 -->
+      <div class="title" style="margin-top: 20px;">货物信息</div>
+      <div class="table-box">
+        <table id="cargo-table">
+          <thead>
+            <tr>
+              <th>货物名称</th>
+              <th>数量</th>
+              <th>包装</th>
+              <th>计费重量(kg)</th>
+              <th>体积(m³)</th>
+              <th>保价金额(元)</th>
+              <th>保价费(元)</th>
+              <th>运费(元)</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><input type="text" value="电视机" class="cargo-name"></td>
+              <td><input type="number" value="1" class="cargo-count" oninput="calcCargo(this)"></td>
+              <td><input type="text" value="纸箱"></td>
+              <td><input type="number" value="100" class="cargo-weight" oninput="calcCargo(this)"></td>
+              <td><input type="number" value="0.5" class="cargo-vol"></td>
+              <td><input type="number" value="10000" class="insured-amount" oninput="calcInsurance(this)"></td>
+              <td class="insurance-fee">70.00</td> <!-- 10000*0.7%=70 -->
+              <td><input type="number" value="1845" class="freight"></td>
+              <td><button class="btn btn-default" onclick="deleteRow(this)">删除</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <button class="btn btn-default" style="margin-top: 10px;" onclick="addRow()">新增货物行</button>
+      </div>
+
+      <!-- 费用与交付 -->
+      <div class="title" style="margin-top: 20px;">费用与交付</div>
+      <div class="form-row">
+        <div class="form-item">
+          <label>其他费用(元)</label>
+          <input type="number" value="0" id="other-fee">
+        </div>
+        <div class="form-item">
+          <label>总运费金额(元)</label>
+          <input type="text" id="total-fee" value="1915.00" readonly> <!-- 1845+70=1915 -->
+        </div>
+        <div class="form-item">
+          <label>付款方式</label>
+          <select id="pay-type">
+            <option value="预付">预付</option>
+            <option value="到付">到付</option>
+            <option value="回结">回结</option>
+          </select>
+        </div>
+        <div class="form-item">
+          <label>送货方式</label>
+          <div style="display: flex; gap: 10px;">
+            <label><input type="radio" name="delivery" value="送货" checked> 送货</label>
+            <label><input type="radio" name="delivery" value="自提"> 自提</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 协议与提交 -->
+      <div class="form-row">
+        <div class="form-item" style="width: 100%;">
+          <label>运输协议</label>
+          <textarea rows="4" placeholder="请填写运输协议内容..." id="transport-agree"></textarea>
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-default" onclick="saveDraft()">暂存草稿</button>
+        <button class="btn btn-primary" onclick="submitAudit()">提交审核</button>
+      </div>
+    </div>
+
+    <!-- 审核页（默认隐藏，提交后展示） -->
+    <div class="card" id="audit-card" style="display: none;">
+      <div class="title">运单审核（运单号：2025093012）</div>
+      <div class="audit-status" id="audit-status">待审核</div>
+      <!-- 预览录入信息（只读） -->
+      <div class="form-row">
+        <div class="form-item">
+          <label>始发站</label>
+          <input type="text" id="audit-start-station" readonly>
+        </div>
+        <div class="form-item">
+          <label>目的站</label>
+          <input type="text" id="audit-end-station" readonly>
+        </div>
+      </div>
+
+      <!-- 货物信息预览 -->
+      <div class="table-box">
+        <table>
+          <thead>
+            <tr>
+              <th>货物名称</th>
+              <th>数量</th>
+              <th>计费重量(kg)</th>
+              <th>保价金额(元)</th>
+              <th>保价费(元)</th>
+              <th>运费(元)</th>
+            </tr>
+          </thead>
+          <tbody id="audit-cargo-body">
+            <!-- 动态填充 -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 审核操作 -->
+      <div class="form-row">
+        <div class="form-item" style="width: 100%;">
+          <label>审核意见</label>
+          <textarea rows="4" id="audit-opinion" placeholder="请输入审核意见..."></textarea>
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="passAudit()">审核通过</button>
+        <button class="btn btn-default" onclick="rejectAudit()">驳回修改</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 保价率（固定）
+    const INSURANCE_RATE = 0.007; 
+
+    // 计算单条货物的保价费、总运费
+    function calcInsurance(input) {
+      const row = input.closest('tr');
+      const insuredAmount = +row.querySelector('.insured-amount').value;
+      const insuranceFee = insuredAmount * INSURANCE_RATE;
+      row.querySelector('.insurance-fee').innerText = insuranceFee.toFixed(2);
+      calcTotalFee();
+    }
+
+    // 计算总运费（运费 + 保价费 + 其他费用）
+    function calcTotalFee() {
+      let total = 0;
+      // 遍历货物行的运费、保价费
+      const rows = document.querySelectorAll('#cargo-table tbody tr');
+      rows.forEach(row => {
+        total += +row.querySelector('.freight').value;
+        total += +row.querySelector('.insurance-fee').innerText;
+      });
+      // 其他费用
+      total += +document.querySelector('#other-fee').value;
+      document.querySelector('#total-fee').value = total.toFixed(2);
+    }
+
+    // 新增货物行
+    function addRow() {
+      const tableBody = document.querySelector('#cargo-table tbody');
+      const newRow = `
+        <tr>
+          <td><input type="text" class="cargo-name"></td>
+          <td><input type="number" value="1" class="cargo-count" oninput="calcCargo(this)"></td>
+          <td><input type="text" value="纸箱"></td>
+          <td><input type="number" value="100" class="cargo-weight" oninput="calcCargo(this)"></td>
+          <td><input type="number" value="0.5" class="cargo-vol"></td>
+          <td><input type="number" value="0" class="insured-amount" oninput="calcInsurance(this)"></td>
+          <td class="insurance-fee">0.00</td>
+          <td><input type="number" value="0" class="freight"></td>
+          <td><button class="btn btn-default" onclick="deleteRow(this)">删除</button></td>
+        </tr>
+      `;
+      tableBody.innerHTML += newRow;
+    }
+
+    // 删除货物行
+    function deleteRow(btn) {
+      btn.closest('tr').remove();
+      calcTotalFee();
+    }
+
+    // 暂存草稿（模拟，可扩展 localStorage 存储）
+    function saveDraft() {
+      alert('草稿已暂存！');
+    }
+
+    // 提交审核：隐藏录入页，展示审核页并填充数据
+    function submitAudit() {
+      // 隐藏录入页
+      document.querySelector('#input-card').style.display = 'none';
+      // 展示审核页
+      document.querySelector('#audit-card').style.display = 'block';
+      
+      // 填充基础信息
+      document.querySelector('#audit-start-station').value = document.querySelector('#start-station').value;
+      document.querySelector('#audit-end-station').value = document.querySelector('#end-station').value;
+      
+      // 填充货物信息
+      const auditBody = document.querySelector('#audit-cargo-body');
+      const rows = document.querySelectorAll('#cargo-table tbody tr');
+      let html = '';
+      rows.forEach(row => {
+        html += `
+          <tr>
+            <td>${row.querySelector('.cargo-name').value}</td>
+            <td>${row.querySelector('.cargo-count').value}</td>
+            <td>${row.querySelector('.cargo-weight').value}</td>
+            <td>${row.querySelector('.insured-amount').value}</td>
+            <td>${row.querySelector('.insurance-fee').innerText}</td>
+            <td>${row.querySelector('.freight').value}</td>
+          </tr>
+        `;
+      });
+      auditBody.innerHTML = html;
+    }
+
+    // 审核通过
+    function passAudit() {
+      const opinion = document.querySelector('#audit-opinion').value;
+      alert(`审核通过！意见：${opinion || '无'}`);
+      document.querySelector('#audit-status').innerText = '已通过';
+      document.querySelector('#audit-status').style.color = 'green';
+    }
+
+    // 驳回修改
+    function rejectAudit() {
+      const opinion = document.querySelector('#audit-opinion').value;
+      alert(`已驳回！意见：${opinion || '无'}`);
+      document.querySelector('#audit-status').innerText = '已驳回';
+      document.querySelector('#audit-status').style.color = 'red';
+      // 可扩展：回显录入页修改
+      document.querySelector('#input-card').style.display = 'block';
+      document.querySelector('#audit-card').style.display = 'none';
+    }
+
+    // 初始化计算（加载时触发一次）
+    window.onload = () => {
+      calcTotalFee();
+    }
+  </script>
+</body>
+</html>
